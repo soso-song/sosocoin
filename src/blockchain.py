@@ -201,13 +201,14 @@ DIFFICULTY_ADJUSTMENT_INTERVAL = 10  # in blocks
 # print(blockchain)
 # print(unspentTxOuts)
 
-# generate first key pair
+# generate first key pair###############
+
 # privateK = initWallet()
 # publicK = getPublicFromWallet()
 
-# mining first block
+# mining first block###############
 
-# make first transaction to self
+# make first transaction to self###############
 # sign the transaction using private key
 
 

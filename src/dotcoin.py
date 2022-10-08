@@ -10,6 +10,14 @@ app.debug = True
 def my_index():
     return render_template('index.html',token="Hello bro")
 
+@app.route('/getPrivateKey', methods=['GET'])
+def getPrivateKey():
+    return None
+
+@app.route('/getPublicKey', methods=['GET'])
+def getPublicKey():
+    return None
+
 @app.route('/blocks', methods=['GET'])
 def getBlocks():
     result = []
@@ -33,11 +41,13 @@ def mineBlock():
 #     connectToPeers(request.body.peer)
 #     return json.dumps()
 
-@app.route('/sendTransaction', methods=['POST'])
-def mineTransaction():
-    address = request.form['address']
-    amount = request.form['amount']
-    resp = generatenextBlockWithTransaction(address, amount)
-    return json.dumps(resp)
+# @app.route('/sendTransaction', methods=['POST'])
+# def mineTransaction():
+#     address = request.form['address']
+#     amount = request.form['amount']
+#     resp = generatenextBlockWithTransaction(address, amount)
+#     return json.dumps(resp)
 
-app.run(debug=True, port=3001)
+
+
+# app.run(debug=True, port=3001)
