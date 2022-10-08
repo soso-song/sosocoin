@@ -19,4 +19,20 @@ To run your code in debug mode (the server will automatically reload when the so
 docker run --rm -p 5000:5000 -v $(pwd)/src:/shared dotcoin flask --app dotcoin.py --debug run
 ```
 
+```
+docker run --rm -p 5000:5000 -v $(pwd)/src:/shared dotcoin flask --app dotcoin.py --debug run --host=0.0.0.0
+```
+
 Type `ctrl-c` to stop the server. 
+
+
+
+
+
+##### React as frontend + Flask as backend, all serve through Flask
+
+your url+port is also repersenting the backend url+port since I chosed to compile the react frontend and serve it throught flask, the reason is:
+
+- everything will still in docker container (requirement)
+- each docker instance will only output one ip 
+- each ip repersent one node
