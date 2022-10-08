@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, render_template
 # from flask_socketio import SocketIO
 
 from blockchain import *
@@ -8,7 +8,7 @@ app.debug = True
 
 @app.route("/")
 def my_index():
-    return Flask.render_template('index.html',token="Hello bro")
+    return render_template('index.html',token="Hello bro")
 
 @app.route('/blocks', methods=['GET'])
 def getBlocks():
@@ -39,3 +39,5 @@ def mineTransaction():
     amount = request.form['amount']
     resp = generatenextBlockWithTransaction(address, amount)
     return json.dumps(resp)
+
+app.run(debug=True, port=3001)
