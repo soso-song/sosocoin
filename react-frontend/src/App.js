@@ -1,24 +1,17 @@
 import logo from './logo.svg';
+import Axios from 'axios';
 import './App.css';
 
 function App() {
+  const getJoke = () => {
+    Axios.get('http://official-joke-api.appspot.com/random_joke').then((response) => {
+      console.log(response.data);
+    });
+  };
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <p>Token from Flask = {window.token}</p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <p>Token from Flask change not showing = {window.token}</p>
+      <button onClick={getJoke}>Get Joke</button>
     </div>
   );
 }
