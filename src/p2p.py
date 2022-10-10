@@ -1,6 +1,7 @@
 from dotcoin import *
 from transaction import *
 from transactionPool import *
+import config
 
 MessageType = {
     "QUERY_LATEST" : 0,

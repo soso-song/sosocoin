@@ -5,7 +5,8 @@ RUN apt-get update && apt-get upgrade -y && \
 
 RUN pip3 install flask pynacl
 RUN pip3 install ecdsa
+RUN pip install requests
 
 WORKDIR /shared
 
-EXPOSE 5000
+# EXPOSE 5000

@@ -1,11 +1,8 @@
 import hashlib
 import ecdsa
-from dotcoin import *
-from wallet import *
-
-# ECDSA(Elliptic Curve Digital Signature Algorithm): Public-key cryptography
-
-COINBASE_AMOUNT = 50
+# from dotcoin import *
+# from wallet import *
+import config
 
 class UnspentTxOut:  # uTxO
     def __init__(self, txOutId, txOutIndex, address, amount):
@@ -36,9 +33,15 @@ class Transaction:
         self.txIns = txIns
         self.txOuts = txOuts
 
+def processTransactions(aTransactions, aUnspentTxOuts, blockIndex):
+    if not validateBlockTransactions(aTransactions, aUnspentTxOuts, blockIndex):
+        print('invalid block transactions')
+        return None
+    return updateUnspentTxOuts(aTransactions, aUnspentTxOuts)
 
 def getTransactionId(transaction):
     txInContent = ''
+    # print("-----------------abc")
     # print(transaction.__dict__)
     for txIn in transaction.txIns:
         txInContent += txIn.txOutId + str(txIn.txOutIndex)
@@ -58,16 +61,11 @@ def validateTransaction(transaction, aUnspentTxOuts):
         print('invalid tx id: ' + transaction.id)
         return False
 
-    hasValidTxIns = True
     for txIn in transaction.txIns:
         if not validateTxIn(txIn, transaction, aUnspentTxOuts):
-            print('invalid txIn')
-            hasValidTxIns = False
-            break
+            print('some of the txIns are invalid in tx: ' + transaction.id)
+            return False
 
-    if not hasValidTxIns:
-        print('some of the txIns are invalid in tx: ' + transaction.id)
-        return False
     # dont need to check txOuts because they are generated from txIns
 
     totalTxInValues = sum(map(lambda txIn: getTxInAmount(
@@ -98,8 +96,16 @@ def validateBlockTransactions(aTransactions, aUnspentTxOuts, blockIndex):
                 groups[txIn.txOutId] = txIn.txOutIndex
 
     # all but coinbase transactions
-    isValidTransactions = map(validateTransaction, aTransactions, aUnspentTxOuts)
-    return all(isValidTransactions)
+    # print("bro here-222212--")
+    # print(aUnspentTxOuts)
+    for tx in aTransactions[1:]:
+        if not validateTransaction(tx, aUnspentTxOuts):
+            print('invalid transaction: ' + tx.id)
+            return False
+    # isValidTransactions = map(validateTransaction, aTransactions, aUnspentTxOuts)
+    # print("bro here-22112--")
+    # print(aUnspentTxOuts)
+    return True
 
 
 def validateCoinbaseTx(cbTransaction, blockIndex):
@@ -125,7 +131,7 @@ def validateCoinbaseTx(cbTransaction, blockIndex):
     if len(cbTransaction.txOuts) != 1:
         print('invalid number of txOuts in coinbase transaction')
         return False
-    if cbTransaction.txOuts[0].amount != COINBASE_AMOUNT:
+    if cbTransaction.txOuts[0].amount != config.COINBASE_AMOUNT:
         print('invalid coinbase amount in coinbase transaction')
         return False
     return True
@@ -133,40 +139,19 @@ def validateCoinbaseTx(cbTransaction, blockIndex):
 
 def validateTxIn(txIn, transaction, unspentTxOuts):
     # check txIn exists in unspentTxOuts
-    referencedUTxOut = findUnspentTxOut(
-        txIn.txOutId, txIn.txOutIndex, unspentTxOuts)
+    referencedUTxOut = findUnspentTxOut(txIn.txOutId, txIn.txOutIndex, unspentTxOuts)
     if referencedUTxOut == None:
-        print('referenced txOut not found: id:' +
-              txIn.txOutId + ' index:' + txIn.txOutIndex)
+        print('referenced txOut not found: id:' + str(txIn.txOutId) + ' index:' + str(txIn.txOutIndex))
         return False
-    address = referencedUTxOut.address
-    # txOut from unspentTxOuts has wallet address
-    # txIn has signature
-    # we check if signature is valid using txOut.address
-    key = ecdsa.VerifyingKey.from_string(
-        bytes.fromhex(address), curve=ecdsa.SECP256k1)
+    publicKey = referencedUTxOut.address
+    # txOut from unspentTxOuts has wallet address (sender)
+    # txIn has signature (sender)
+    # we check if signature is valid using txOut.address (sender)
+    # vk = ecdsa.VerifyingKey.from_string(bytes.fromhex(public_key), curve=ecdsa.SECP256k1, hashfunc=sha256) # the default is sha1
+    # vk.verify(bytes.fromhex(sig), message) # True
+    key = ecdsa.VerifyingKey.from_string(bytes.fromhex(publicKey), curve=ecdsa.SECP256k1)
     return key.verify(bytes.fromhex(txIn.signature), bytes.fromhex(transaction.id))
 
-
-def getTxInAmount(txIn, unspentTxOuts):
-    # txIn don't have amount, so we need to find it in unspentTxOuts
-    return findUnspentTxOut(txIn.txOutId, txIn.txOutIndex, unspentTxOuts).amount
-
-
-def findUnspentTxOut(transactionId, index, unspentTxOuts):
-    for uTxO in unspentTxOuts:
-        if uTxO.txOutId == transactionId and uTxO.txOutIndex == index:
-            return uTxO
-    return None
-
-
-def getCoinbaseTransaction(address, blockIndex):
-    t = Transaction(
-        None,
-        [TxIn(None, blockIndex, None)],
-        [TxOut(address, COINBASE_AMOUNT)])
-    t.id = getTransactionId(t)
-    return t
 
 
 def signTxIn(transaction, txInIndex, privateKey, unspentTxOuts):
@@ -180,18 +165,17 @@ def signTxIn(transaction, txInIndex, privateKey, unspentTxOuts):
         return None
     referencedAddress = referencedUnspentTxOut.address
     # check if the private key matches TxOut.address that has TxOut.amount coins from unspentTxOuts(history)
-    if getPublicKey(privateKey) != referencedAddress:
+    if config.PUBLIC_KEY != referencedAddress:
         print('trying to sign an input with private' +
               ' key that does not match the address that is referenced in txIn')
         # throw Error()
         return None
     #key = ec.generate_private_key(int(privateKey, 16), ec.SECP256K1())
     #signature = key.sign(dataToSign.encode('utf-8'), ec.ECDSA(hashes.SHA256()))
-    key = ecdsa.SigningKey.from_string(
-        bytes.fromhex(privateKey), curve=ecdsa.SECP256k1)
+    key = ecdsa.SigningKey.from_string(bytes.fromhex(privateKey), curve=ecdsa.SECP256k1)
     signature = key.sign(bytes.fromhex(txId))
-
-    return signature
+    
+    return signature.hex()
 
 
 def updateUnspentTxOuts(newTransactions, unspentTxOuts):
@@ -223,18 +207,36 @@ def updateUnspentTxOuts(newTransactions, unspentTxOuts):
     return resultingUnspentTxOuts
 
 
-def processTransactions(aTransactions, aUnspentTxOuts, blockIndex):
-    if not validateBlockTransactions(aTransactions, aUnspentTxOuts, blockIndex):
-        print('invalid block transactions')
-        return None
-    return updateUnspentTxOuts(aTransactions, aUnspentTxOuts)
+def getTxInAmount(txIn, unspentTxOuts):
+    # txIn don't have amount, so we need to find it in unspentTxOuts
+    return findUnspentTxOut(txIn.txOutId, txIn.txOutIndex, unspentTxOuts).amount
 
 
-def getPublicKey(privateKey):
-    #key = ec.generate_private_key(int(privateKey, 16), ec.SECP256K1())
-    key = ecdsa.SigningKey.from_string(
-        bytes.fromhex(privateKey), curve=ecdsa.SECP256k1)
-    return key.public_key().public_numbers().x
+def findUnspentTxOut(transactionId, index, unspentTxOuts):
+    # print("here check------")
+    # print(unspentTxOuts)
+    for uTxO in unspentTxOuts:
+        print(uTxO.__dict__)
+        if uTxO.txOutId == transactionId and uTxO.txOutIndex == index:
+            return uTxO
+    return None
+
+
+def getCoinbaseTransaction(address, blockIndex):
+    t = Transaction(
+        None,
+        [TxIn('', blockIndex, '')],
+        [TxOut(address, config.COINBASE_AMOUNT)])
+    t.id = getTransactionId(t)
+    return t
+
+
+
+# def getPublicKey(privateKey):
+#     #key = ec.generate_private_key(int(privateKey, 16), ec.SECP256K1())
+#     key = ecdsa.SigningKey.from_string(
+#         bytes.fromhex(privateKey), curve=ecdsa.SECP256k1)
+#     return key.public_key().public_numbers().x
 
 
 def isValidTxInStructure(txIn):

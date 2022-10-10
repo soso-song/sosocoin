@@ -1,55 +1,35 @@
-from dotcoin import *
 import ecdsa
-from transaction import *
+# from dotcoin import *
+from transaction import TxIn, TxOut, Transaction, getTransactionId, signTxIn
+# from blockchain import getUnspentTxOuts
+import config
 
-def getPrivateFromWallet():
-    privateKey = None
-    try:
-        with open(privateKeyLocation, 'r') as f:
-            privateKey = f.read()
-    except (IOError, IndexError):
-        print('no wallet found')
-    return privateKey
+# from config import printTxs 
 
-
-def getPublicFromWallet():
-    privateKey = getPrivateFromWallet()
-    key = ecdsa.SigningKey.from_string(
-        bytes.fromhex(privateKey), curve=ecdsa.SECP256k1)
-    publicKey = key.get_verifying_key().to_string().hex()
-    return publicKey
-
-
-def generatePrivateKey():
-    keyPair = ecdsa.SigningKey.generate(curve=ecdsa.SECP256k1)
-    privateKey = keyPair.to_string().hex()
-    return privateKey
+def generateKeypair():
+    privateKey = ecdsa.SigningKey.generate(curve=ecdsa.SECP256k1)
+    publicKey = privateKey.get_verifying_key()
+    return privateKey.to_string().hex(), publicKey.to_string().hex()
 
 
 def initWallet():
-    try:
-        with open(privateKeyLocation, 'r') as f:
-            privateKey = f.read()
-    except (IOError, IndexError):
-        privateKey = generatePrivateKey()
-        with open(privateKeyLocation, 'w') as f:
-            f.write(privateKey)
-        print('new wallet with private key created')
-    return privateKey
-
-# def deleteWallet():
-#     os.remove(privateKeyLocation)
+    (privateKey, publicKey) = generateKeypair()
+    config.PRIVATE_KEY = privateKey
+    config.PUBLIC_KEY = publicKey
 
 
 def getBalance(address):
     balance = 0
-    uTxOs = findUnspentTxOuts(address, unspentTxOuts)
+    uTxOs = findUnspentTxOuts(address, config.unspentTxOuts[:])
     for uTxO in uTxOs:
         balance += uTxO.amount
     return balance
 
 
 def findUnspentTxOuts(ownerAddress, unspentTxOuts):
+    # print("------hsfdr-----")
+    # print(ownerAddress)
+    # print(unspentTxOuts[0].__dict__)
     return list(filter(lambda uTxO: uTxO.address == ownerAddress, unspentTxOuts))
 # def findUnspentTxOuts(ownerAddress, unspentTxOuts):
 #     uTxOs = []
@@ -62,6 +42,9 @@ def findUnspentTxOuts(ownerAddress, unspentTxOuts):
 def findTxOutsForAmount(amount, myUnspentTxOuts):
     currentAmount = 0
     includedUnspentTxOuts = []
+    # print("------here working------")
+    # print(amount)
+    # print(myUnspentTxOuts)
     for myUnspentTxOut in myUnspentTxOuts:
         includedUnspentTxOuts.append(myUnspentTxOut)
         currentAmount += myUnspentTxOut.amount
@@ -69,6 +52,61 @@ def findTxOutsForAmount(amount, myUnspentTxOuts):
             leftOverAmount = currentAmount - amount
             return includedUnspentTxOuts, leftOverAmount
     raise Exception('not enough coins to send transaction')
+
+
+def createTransaction(receiverAddress, amount, privateKey, unspentTxOuts, txPool):
+    # print('txPool: ' + txPool)
+    myAddress = config.PUBLIC_KEY
+    myUnspentTxOutsAll = findUnspentTxOuts(myAddress, unspentTxOuts)
+    # print("------here wor-----")
+    # print(myUnspentTxOutsAll)
+    # print("------myUnspentTxOutsAll[0].__dict-----")
+    # print(myUnspentTxOutsAll[0].__dict__)
+    # filter from unspentOutputs such inputs that are referenced in pool
+    myUnspentTxOuts = filterTxPoolTxs(myUnspentTxOutsAll, txPool)
+    # print("------here w-----")
+    # print(myUnspentTxOuts)
+
+    # filter from unspentOutputs such inputs that are referenced in pool
+    (includeUnspentTxOuts, leftOverAmount) = findTxOutsForAmount(amount, myUnspentTxOuts)
+    # print("------hfdsfs")
+    # print(includeUnspentTxOuts)
+    # print(leftOverAmount)
+
+    def toUnsignedTxIn(unspentTxOut):
+        txIn = TxIn(unspentTxOut.txOutId, unspentTxOut.txOutIndex, '')
+        return txIn
+
+    unsignedTxIns = list(map(toUnsignedTxIn, includeUnspentTxOuts))
+    # print("------hfddsfsf22s")
+    # print(unsignedTxIns)
+    
+    
+    txIns = unsignedTxIns
+    txOuts = createTxOuts(
+        receiverAddress, myAddress, amount, leftOverAmount)
+    tx = Transaction('', txIns, txOuts)
+    tx.id = getTransactionId(tx)
+    
+    print("ourrange-----------------")
+    printTxs([tx])
+
+    # for txIn in tx.txIns:
+    for index, txIn in enumerate(tx.txIns):
+        print(txIn.__dict__)
+        txIn.signature = signTxIn(tx, index, privateKey, unspentTxOuts)
+
+    return tx
+
+
+def filterTxPoolTxs(unspentTxOuts, transactionPool):
+    filUnspentTxOuts = unspentTxOuts[:]
+    for tx in transactionPool:
+        for txIn in tx.txIns:
+            for unspentTxOut in filUnspentTxOuts:
+                if unspentTxOut.txOutId == txIn.txOutId and unspentTxOut.txOutIndex == txIn.txOutIndex:
+                    filUnspentTxOuts.remove(unspentTxOut)
+    return filUnspentTxOuts
 
 
 def createTxOuts(receiverAddress, myAddress, amount, leftOverAmount):
@@ -79,52 +117,51 @@ def createTxOuts(receiverAddress, myAddress, amount, leftOverAmount):
         leftOverTx = TxOut(myAddress, leftOverAmount)
         return [txOut1, leftOverTx]
 
-def filterTxPoolTxs(unspentTxOuts, transactionPool):
-    txIns = [txIn for tx in transactionPool for txIn in tx.txIns]
-    removable = []
-    for tx in transactionPool:
-        for txIn in tx.txIns:
-            uTxOut = findUnspentTxOuts(txIn.txOutId, txIn.txOutIndex, unspentTxOuts)
-            if uTxOut == None:
-                removable.append(tx)
-    return list(filter(lambda tx: tx not in removable, transactionPool))
+# privateKeyLocation = 'wallet/private_key'
+
+# def getPrivateFromWallet():
+#     privateKey = None
+#     try:
+#         with open(privateKeyLocation, 'r') as f:
+#             privateKey = f.read()
+#     except (IOError, IndexError):
+#         print('no wallet found')
+#     return privateKey
+
+# def getPublicFromWallet():
+#     privateKey = getPrivateFromWallet()
+#     key = ecdsa.SigningKey.from_string(
+#         bytes.fromhex(privateKey), curve=ecdsa.SECP256k1)
+#     publicKey = key.get_verifying_key().to_string().hex()
+#     return publicKey
+
+# never expect to receive a private key from outside
+# def getPublicKey(privateKey):
+#     key = ecdsa.SigningKey.from_string(
+#         bytes.fromhex(privateKey), curve=ecdsa.SECP256k1)
+#     publicKey = key.get_verifying_key().to_string().hex()
+#     return publicKey
+
+# def initWallet():
+#     try:
+#         with open(privateKeyLocation, 'r') as f:
+#             privateKey = f.read()
+#     except (IOError, IndexError):
+#         privateKey = generatePrivateKey()
+#         with open(privateKeyLocation, 'w') as f:
+#             f.write(privateKey)
+#         print('new wallet with private key created')
+#     return privateKey
+
+# def deleteWallet():
+#     os.remove(privateKeyLocation)
 
 
-def createTransaction(receiverAddress, amount, privateKey, unspentTxOuts, txPool):
-    print('txPool: ' + txPool)
-    myAddress = getPublicKey(privateKey)
-    myUnspentTxOutsA = findUnspentTxOuts(myAddress, unspentTxOuts)
 
-    myUnspentTxOuts = filterTxPoolTxs(myUnspentTxOutsA, txPool)
-
-    # filter from unspentOutputs such inputs that are referenced in pool
-    (includeUnspentTxOuts, leftOverAmount) = findTxOutsForAmount(
-        amount, myUnspentTxOuts)
-
-    def toUnsignedTxIn(unspentTxOut):
-        txIn = TxIn()
-        txIn.txOutId = unspentTxOut.txOutId
-        txIn.txOutIndex = unspentTxOut.txOutIndex
-        return txIn
-
-    unsignedTxIns = list(map(toUnsignedTxIn, includeUnspentTxOuts))
-
-    tx = Transaction()
-    tx.txIns = unsignedTxIns
-    tx.txOuts = createTxOuts(
-        receiverAddress, myAddress, amount, leftOverAmount)
-    tx.id = getTransactionId(tx)
-    tx.txIns = list(map(lambda txIn, index: signTxIn(
-        tx, index, privateKey, unspentTxOuts), tx.txIns, range(len(tx.txIns))))
-    return tx
-
-
-# @app.route('/mineTransaction', methods=['POST'])
-# def mineTransaction():
-#     address = request.form['address']
-#     amount = request.form['amount']
-#     resp = generatenextBlockWithTransaction(address, amount)
-#     return json.dumps(resp)
-
-
-privateKeyLocation = 'wallet/private_key'
+def printTxs(txs):
+    print("printTxs-----------------")
+    transactions = [tx.__dict__.copy() for tx in txs[:]]
+    for transaction in transactions:
+        transaction['txIns'] = [txIn.__dict__.copy() for txIn in transaction['txIns']]
+        transaction['txOuts'] = [txOut.__dict__ .copy()for txOut in transaction['txOuts']]
+    print(transactions)

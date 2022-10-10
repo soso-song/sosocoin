@@ -2,10 +2,13 @@ import hashlib
 import time
 import json
 
+import config
+
 from transaction import getCoinbaseTransaction, isValidAddress, processTransactions, Transaction, UnspentTxOut, TxIn, TxOut
 # , updateTransactionPool
-from transactionPool import addToTransactionPool, getTransactionPool
-from wallet import initWallet, createTransaction, findUnspentTxOuts, getBalance, getPrivateFromWallet, getPublicFromWallet
+from transactionPool import addToTransactionPool, getTransactionPool, updateTransactionPool
+# , initWallet, //getPrivateFromWallet, getPublicFromWallet
+from wallet import createTransaction, findUnspentTxOuts, getBalance
 
 
 class Block:
@@ -18,15 +21,14 @@ class Block:
         self.difficulty = difficulty
         self.nonce = nonce
 
-def calculateHashForBlock(block):
-    return calculateHash(block.index, block.previousHash, block.timestamp, block.data, block.difficulty, block.nonce)
 
-def calculateHash(index, previousHash, timestamp, data, difficulty, nonce):
-    blockStr = str(index) + previousHash + str(timestamp) + str(data) + str(difficulty) + str(nonce)
-    return hashlib.sha256(blockStr.encode('utf-8')).hexdigest()
+def sendTransaction(address, amount):
+    tx = createTransaction(address, amount, config.PRIVATE_KEY, config.unspentTxOuts, config.transactionPool)
+    addToTransactionPool(tx, config.unspentTxOuts[:])
+    # broadCastTransactionPool()
+    # print('broadcasting transaction: ' + str(tx))
+    return tx
 
-def getCurrentTimestamp():
-    return int(time.time())
 
 def generateRawNextBlock(blockData):
     previousBlock = getLatestBlock()
@@ -35,20 +37,31 @@ def generateRawNextBlock(blockData):
     nextTimestamp = getCurrentTimestamp()
     newBlock = findBlock(nextIndex, previousBlock.hash,
                          nextTimestamp, blockData, difficulty)
-    if addBlock(newBlock):
+    if addBlockToChain(newBlock): #if addBlock(newBlock):
         #broadcastLatest()
-        print('broadcastLatest() adding: ' + json.dumps(newBlock.__dict__))
+        print('broadcastLatest() adding: ' + str(newBlock.__dict__))
     return newBlock
 
-def generateNextBlock(blockData):
-    coinbaseTx = getCoinbaseTransaction(getPublicFromWallet(), getLatestBlock().index + 1)
-    blockData = [coinbaseTx].concat(getTransactionPool())
-    return generateRawNextBlock(blockData)
+
+def generateNextBlock():
+    coinbaseTx = getCoinbaseTransaction(config.PUBLIC_KEY, getLatestBlock().index + 1)
+    blockData = [coinbaseTx] + getTransactionPool()
+    print("we are here-------ff----------")
+    print(blockData)
+    for tx in blockData:
+        print(tx.__dict__)
+    print(config.unspentTxOuts)
+    for unspentTxOut in config.unspentTxOuts:
+        print(unspentTxOut.__dict__)
+    print(config.transactionPool)
+    for tx in config.transactionPool:
+        print(tx.__dict__)
+    return generateRawNextBlock(blockData) # blockData is all tx avaliable for the node in current block
 
 
 def isValidNewBlock(newBlock, previousBlock):
     if not isValidBlockStructure(newBlock):
-        print('invalid structure')
+        print('invalid block structure: ' + str(newBlock.__dict__))
         return False
     elif previousBlock.index + 1 != newBlock.index:
         print('invalid index')
@@ -77,16 +90,18 @@ def hashMatchesBlockContent(block):
     blockHash = calculateHashForBlock(block)
     return blockHash == block.hash
 
-def addBlock(newBlock):
-    if isValidNewBlock(newBlock, getLatestBlock()):
-        blockchain.append(newBlock)
+# def addBlock(newBlock):
+#     if isValidNewBlock(newBlock, getLatestBlock()):
+#         config.blockchain.append(newBlock)
 
 def isValidBlockStructure(block):
     return (type(block.index) == int and
             type(block.hash) == str and
             type(block.previousHash) == str and
             type(block.timestamp) == int and
-            type(block.data) == str)
+            type(block.data) == list and # list of transactions
+            type(block.difficulty) == int and
+            type(block.nonce) == int) 
 
 def isvalidChain(blockchainToValidate):
     #if JSON.stringify(blockchainToValidate[0]) != JSON.stringify(genesisBlock):
@@ -97,7 +112,20 @@ def isvalidChain(blockchainToValidate):
             return False
     return True
 
-def replaceChain(newBlocks):
+def addBlockToChain(newBlock):
+    if isValidNewBlock(newBlock, getLatestBlock()):
+        retVal = processTransactions(newBlock.data, config.unspentTxOuts, newBlock.index)
+        if retVal == None:
+            print('block is not valid in terms of transactions')
+            return False
+        else:
+            config.blockchain.append(newBlock)
+            config.unspentTxOuts = retVal
+            updateTransactionPool(config.unspentTxOuts)
+            return True
+    return False
+
+def replaceChain(newBlocks): # need update changes 
     if (isvalidChain(newBlocks) and 
         getAccumulatedDifficulty(newBlocks) > getAccumulatedDifficulty(getBlockchain())):
         print('Received blockchain is valid. Replacing current blockchain with received blockchain')
@@ -107,11 +135,11 @@ def replaceChain(newBlocks):
 
 ### Blockchain fucntions
 def getLatestBlock():
-    return getBlockchain()[-1]
+    return getBlockchain()[:][-1]
 def getGenesisBlock():
-    return genesisBlock
+    return config.genesisBlock.copy()
 def getBlockchain():
-    return blockchain
+    return config.blockchain[:]
 
 ###################################################POW
 
@@ -137,8 +165,8 @@ def getDifficulty(aBlockchain):
         return latestBlock.difficulty
 
 def getAdjustedDifficulty(latestBlock, aBlockchain):
-    prevAdjustmentBlock = aBlockchain[-10]
-    timeExpected = BLOCK_GENERATION_INTERVAL * 10
+    prevAdjustmentBlock = aBlockchain[-config.DIFFICULTY_ADJUSTMENT_INTERVAL]
+    timeExpected = config.BLOCK_GENERATION_INTERVAL * 10
     timeTaken = latestBlock.timestamp - prevAdjustmentBlock.timestamp
     if timeTaken < timeExpected / 2:
         return prevAdjustmentBlock.difficulty + 1
@@ -157,41 +185,28 @@ def getAccumulatedDifficulty(aBlockchain):
     difficulty = map(lambda block: 2**block.difficulty, aBlockchain)
     return sum(difficulty)
 
+def calculateHashForBlock(block):
+    return calculateHash(block.index, block.previousHash, block.timestamp, block.data, block.difficulty, block.nonce)
 
+def calculateHash(index, previousHash, timestamp, data, difficulty, nonce):
+    blockStr = str(index) + previousHash + str(timestamp) + str(data) + str(difficulty) + str(nonce)
+    return hashlib.sha256(blockStr.encode('utf-8')).hexdigest()
+
+def getCurrentTimestamp():
+    return int(time.time())
 
 # ------------CHAPTER 5 BLOCKCHAIN.PY----------------
-def getUnspentTxOuts():
-    return unspentTxOuts[:]
-
-def sendTransaction(address, amount):
-    tx = createTransaction(address, amount, getPrivateFromWallet(), unspentTxOuts, transactionPool)
-    addToTransactionPool(tx, getUnspentTxOuts())
-    # broadCastTransactionPool()
-    print('broadcasting transaction: %s' % json.dumps(tx))
-    return tx
+# def getUnspentTxOuts():
+#     return config.unspentTxOuts[:]
 
 
-def handleReceivedTransaction(transaction):
-    addToTransactionPool(transaction, getUnspentTxOuts())
+
+# def handleReceivedTransaction(transaction):
+#     addToTransactionPool(transaction, getUnspentTxOuts())
 
 
 ###################################################
-genesisTransaction = Transaction(
-    'e655f6a5f26dc9b4cac6e46f52336428287759cf81ef5ff10854f69d68f43fa3',
-    [TxIn('', 0, '')],
-    [TxOut('04bfcab8722991ae774db48f934ca79cfb7dd991229153b9f732ba5334aafcd8e7266e47076996b55a14bf9913ee3145ce0cfc1372ada8ada74bd287450313534a', 50)]
-)
 
-genesisBlock = Block(0, '91a73664bc84c0baa1fc75ea6e4aa6d1d20c5df664c724e3159aefc2e1186627',
-                     '', 1465154705, [genesisTransaction], 0, 0)
-
-blockchain = [genesisBlock]
-
-unspentTxOuts = processTransactions(blockchain[0].data, [], 0)
-
-BLOCK_GENERATION_INTERVAL = 10  # in seconds
-
-DIFFICULTY_ADJUSTMENT_INTERVAL = 10  # in blocks
 
 # COINBASE_AMOUNT = 50 # in transacion.py
 
