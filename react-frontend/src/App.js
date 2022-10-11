@@ -92,6 +92,12 @@ function App() {
     });
   };
 
+  const syncPeers = () => {
+    Axios.get(flaskHost+'/syncPeers').then((response) => {
+      console.log("response: " + response.data);
+    });
+  };
+
   return (
     <div className="App">
       <p>This frontend is connected with flask backend = {window.token}</p>
@@ -128,7 +134,8 @@ function App() {
       {'\n'}
       <button onClick={sendTransaction}>SendTransaction</button>
       {'\n'}
-
+      <hr />
+      <button onClick={syncPeers}>Sync with peers</button>
       <hr />
       <h1> btcsan block history </h1>
       <button onClick={getBlocks}>refresh Blocks</button>

@@ -1,9 +1,11 @@
+from tarfile import BLOCKSIZE
 from flask import Flask, request, render_template
 import requests
 # from flask_socketio import SocketIO
 
 from blockchain import *  # getBlockchain, generateNextBlock
 # from wallet import generateKeypair#, getPublicKey
+from p2p import handleBlockchainResponse
 
 import init
 init.init()
@@ -73,6 +75,7 @@ def getBlocksAPI():
     return json.dumps(result)
 
 
+
 @app.route('/unspentTxOuts', methods=['GET'])
 def getUnspentTxOutsAPI():
     result = []
@@ -106,7 +109,60 @@ def sendTransactionAPI():
     return json.dumps(transaction)
 
 
-# peer methods 
+
+# @app.route('/encodedBlocks', methods=['GET'])
+# def getEncodedBlocksAPI():
+#     print("herere----------111------")
+#     print(getBlockchain())
+#     bytes_encoded = getBlockchain().encode('utf-8')
+#     print(bytes_encoded)
+#     return bytes_encoded
+
+@app.route('/syncPeers', methods=['GET'])
+def syncPeersAPI():
+    result = []
+    for peer in config.peers:
+        peerPort = peer.replace('http://localhost:', '')
+        result.append(syncLatestAPI(
+            "http://host.docker.internal:"+peerPort))
+    return result
+
+# @app.route('/syncLatest', methods=['POST'])
+def syncLatestAPI(peerIP):
+    peerBlocksJson = requests.get(peerIP+'/blocks')
+    peerBlocks = json.loads(peerBlocksJson.text)
+    for i,peerBlock in enumerate(peerBlocks):
+        for j, tx in enumerate(peerBlock['data']):
+            tx['txIns'] = [TxIn(txIn['txOutId'], txIn['txOutIndex'], txIn['signature']) for txIn in tx['txIns']]
+            tx['txOuts'] = [TxOut(txOut['address'], txOut['amount']) for txOut in tx['txOuts']]
+            peerBlock['data'][j] = Transaction(tx['id'], tx['txIns'], tx['txOuts'])
+        peerBlocks[i] = Block(peerBlock['index'], peerBlock['hash'], peerBlock['previousHash'], peerBlock['timestamp'], peerBlock['data'], peerBlock['difficulty'], peerBlock['nonce'])
+    
+    
+    # print("herere--------222--------")
+    # print(peerBlocks)
+
+    # result = []
+    # for block in peerBlocks:
+    #     blockDict = block.__dict__.copy()
+    #     transactions = [tx.__dict__.copy() for tx in blockDict['data']]
+    #     for transaction in transactions:
+    #         transaction['txIns'] = [txIn.__dict__.copy() for txIn in transaction['txIns']]
+    #         transaction['txOuts'] = [txOut.__dict__ .copy()for txOut in transaction['txOuts']]
+    #     blockDict['data'] = transactions
+    #     result.append(blockDict)
+    # return json.dumps(result)
+    # print(response.content)
+
+    # convert Response to Block
+   
+    # print(receivedBlocks)
+    # requests.post(peerIP,json={'block': getLatestBlock().__dict__})
+    # print("herere--------333--------")
+    # print(getLatestBlock().__dict__['index'])
+    # print(peerBlocks[0].__dict__['index'])
+    return handleBlockchainResponse(peerBlocks) #peerBlocks#requests.get(peerIP+'/blocks').text#handleBlockchainResponse(response)
+
 @app.route('/peers', methods=['GET'])
 def getPeersAPI():
     return json.dumps(config.peers)
@@ -115,17 +171,35 @@ def getPeersAPI():
 def addPeerAPI():
     peer = request.get_json()['peerIP']
     addBack = request.get_json()['addBack']
-    print("-----111")
-    print(peer)
-    print(addBack)
-    if peer not in config.peers:
-        config.peers.append(peer)
-        result = request.host + ': added ' + peer
-    else:
-        result = request.host + ': already in peer with ' + peer
+    # print("-----111")
+    # print(peer)
+    # print(addBack)
+    # print(request.host.docker.internal)
+
+    if not 'http://localhost:' in peer:
+        return "only support http://localhost:**** for now, received: " + peer
+
+    if peer[-1] == '/':
+        peer = peer[:-1]
+
+    if request.host in peer:
+        return 'Cannot add self'
+
+    if peer in config.peers:
+        return request.host + ': already has peer ' + peer
+
+    config.peers.append(peer)  
+    result = request.host + ': added ' + peer
+
     if addBack:
-        result += requests.post('http://' + peer + '/peer',
-            json={'peerIP': request.host, 'addBack': None})
+        peerPort = peer.replace('http://localhost:', '')
+
+        result += '\n'
+        result += requests.post("http://host.docker.internal:"+peerPort+'/peer',
+                json={'peerIP': "http://"+request.host, 'addBack': None}).text
+
+        # if "http://host.docker.internal:" in result:
+        #     result = result.replace("host.docker.internal:", "localhost:")
     return result #json.dumps(config.peers)
 
 # for reference

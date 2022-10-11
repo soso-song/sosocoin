@@ -87,7 +87,12 @@ def hasValidHash(block):
     return True
 
 def hashMatchesBlockContent(block):
-    blockHash = calculateHashForBlock(block)
+    print("bro---------")
+    
+    # blockHash = calculateHashForBlock(block)
+    blockHash = calculateHash(block.index, block.previousHash, block.timestamp, block.data, block.difficulty, block.nonce)
+    print(block.hash)
+    print(blockHash)
     return blockHash == block.hash
 
 # def addBlock(newBlock):
@@ -103,14 +108,31 @@ def isValidBlockStructure(block):
             type(block.difficulty) == int and
             type(block.nonce) == int) 
 
+
+# check if the given blockchain is valid, return unspentTxOuts if valid
 def isvalidChain(blockchainToValidate):
-    #if JSON.stringify(blockchainToValidate[0]) != JSON.stringify(genesisBlock):
-    if json.dumps(blockchainToValidate[0]) != json.dumps(getGenesisBlock()):
+    print("bro-0--")
+    # print(blockchainToValidate[0].__dict__)
+    # print(getGenesisBlock().__dict__)
+    if blockchainToValidate[0].hash != getGenesisBlock().hash: # the hash will also be verified before this function
         return False
+    aUnspentTxOuts = []
+    print("bro-1--")
+
     for i in range(1, len(blockchainToValidate)):
+        print("bro--2-")
+        currentBlock = blockchainToValidate[i]
         if not isValidNewBlock(blockchainToValidate[i], blockchainToValidate[i - 1]):
+            print("bro-3--")
             return False
-    return True
+        aUnspentTxOuts = processTransactions(currentBlock.data, aUnspentTxOuts, currentBlock.index)
+        print("bro-4--")
+        if aUnspentTxOuts == None:
+            print("bro-5--")
+            print('invalid transactions in blockchain')
+            return False
+    print("bro-6--")
+    return aUnspentTxOuts
 
 def addBlockToChain(newBlock):
     if isValidNewBlock(newBlock, getLatestBlock()):
@@ -125,19 +147,29 @@ def addBlockToChain(newBlock):
             return True
     return False
 
-def replaceChain(newBlocks): # need update changes 
-    if (isvalidChain(newBlocks) and 
-        getAccumulatedDifficulty(newBlocks) > getAccumulatedDifficulty(getBlockchain())):
-        print('Received blockchain is valid. Replacing current blockchain with received blockchain')
-        blockchain = newBlocks
-        #broadcastLatest()
-    print('Received blockchain invalid')
+def replaceChain(newBlocks):
+    result = []
+    unspentTxOuts = isvalidChain(newBlocks)
+    if not unspentTxOuts:
+        result.append('received blockchain invalid')
+        return result #false
+    
+    if getAccumulatedDifficulty(newBlocks) <= getAccumulatedDifficulty(getBlockchain()):
+        result.append('received blockchain is not longer than current blockchain')
+        return result #false
+    
+    result.append('received blockchain is valid. Replacing current blockchain with received blockchain')
+    config.blockchain = newBlocks
+    config.unspentTxOuts = unspentTxOuts
+    updateTransactionPool(config.unspentTxOuts)
+    # broadcastLatest()
+    return result
 
 ### Blockchain fucntions
 def getLatestBlock():
     return getBlockchain()[:][-1]
 def getGenesisBlock():
-    return config.genesisBlock.copy()
+    return config.genesisBlock
 def getBlockchain():
     return config.blockchain[:]
 
@@ -189,7 +221,7 @@ def calculateHashForBlock(block):
     return calculateHash(block.index, block.previousHash, block.timestamp, block.data, block.difficulty, block.nonce)
 
 def calculateHash(index, previousHash, timestamp, data, difficulty, nonce):
-    blockStr = str(index) + previousHash + str(timestamp) + str(data) + str(difficulty) + str(nonce)
+    blockStr = str(index) + previousHash + str(timestamp) + str(difficulty) + str(nonce)
     return hashlib.sha256(blockStr.encode('utf-8')).hexdigest()
 
 def getCurrentTimestamp():
