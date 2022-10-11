@@ -111,7 +111,7 @@ function App() {
     // const amount = document.getElementById("amount").value;
     Axios.post(flaskHost + '/transaction', { "receiver": receiver, "amount": amount }).then((response) => {
       console.log("response: " + response.data);
-      setMes("response: " + response.data);
+      // setMes("response: " + response.data);
     });
   };
 

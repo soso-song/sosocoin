@@ -58,27 +58,31 @@ docker run --rm -p 5001:5001 -v $(pwd)/src:/shared dotcoin flask --app dotcoin.p
 
 - Access http://localhost:5000/ click `peer->refresh button`
 
-- Access http://localhost:5001/ click `peer->refresh buttonr`
+- Access http://localhost:5001/ click `peer->refresh button`
 
   > run  `npm run build` under `/react-frontend` if page is not working (check Contribution section)
 
-- Enter `http://localhost:5000/` to Peer section and click `query peer` in both nodes to check they are linked.
+- Enter `http://localhost:5000/` to Peer section and click "+" symbol.
+
+- Click  `peer->refresh button` in both nodes to check they are linked.
 
 ##### Test Flow 2
 
 - Go back to http://localhost:5000/
 
-- Click `keypair->refresh buttonr` button, this will returns port's public and private key.
+- Click `keypair->refresh button` , this will returns port's public and private key.
 
   > Note: this operation can only be done when the frontend & backend with the same port, ie. since they are considered as one node, the private key will returned for testing purposes. But there are no functions that depend on private key in frontend.
 
-- Click `refresh balance` button this will display your balance
+- Click `balance->refresh button`  this will display your balance
 
 - Click `start mining` button twice, this will generate two blocks and `50*2` coins as a reward will be sent to the public key you get above.
 
   > The mining difficulty level is represented with BLOCK_GENERATION_INTERVAL = DIFFICULTY_ADJUSTMENT_INTERVAL = 10(seconds, blocks), difficulites starts with 0, you may need to click the button multiple times to see its changes 
 
-- Click `refresh blocks` button to check there are 3 blocks, the first block is the built in genesis block
+- You can change the `STARTING_DIFFICULTY` in `/src/init.py` ( `21`~`23` takes 10 seconds on my 2017 Macbook pro)
+
+- Click `blocks->refresh button` button to check there are 3 blocks, the first block is the built in genesis block
 
 ##### Test Flow 3
 
@@ -93,7 +97,7 @@ docker run --rm -p 5001:5001 -v $(pwd)/src:/shared dotcoin flask --app dotcoin.p
   > http://localhost:5000/transactionPool
 
 - Click `start mining` to add the transaction to the block
-- Click `refresh blocks` to see the transaction you make
+- Click `blocks->refresh button` to see the transaction you make
 
 ##### Test Flow 4
 
@@ -102,6 +106,8 @@ docker run --rm -p 5001:5001 -v $(pwd)/src:/shared dotcoin flask --app dotcoin.p
   - if peer's block is 1 block longer
 
   - if peer's block is multiple blocks longer
+
+- Click `blocks->refresh button` to see
 
 
 

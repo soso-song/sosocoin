@@ -7,7 +7,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 export default function PairKeys(props) {
   return (
     <>
-      <Title>Pair Keys</Title>
+      <Title>Key Pair</Title>
       <CardContent sx={{flex:1}}>
         <Box display="flex" flexDirection='row' textAlign='center' height='100%' maxHeight='150px'>
             <Box width='50%' height='100%' paddingLeft='5px' paddingRight='5px' display='flex' flexDirection='column'>

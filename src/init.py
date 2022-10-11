@@ -3,6 +3,8 @@ from blockchain import Block, generateNextBlock
 from transaction import Transaction, TxIn, TxOut, processTransactions
 from wallet import initWallet
 
+STARTING_DIFFICULTY = 0 #23
+
 def init():
     config.genesisTransaction = Transaction(
         'e655f6a5f26dc9b4cac6e46f52336428287759cf81ef5ff10854f69d68f43fa3',
@@ -11,7 +13,7 @@ def init():
     )
 
     config.genesisBlock = Block(0, '91a73664bc84c0baa1fc75ea6e4aa6d1d20c5df664c724e3159aefc2e1186627',
-                        '', 1465154705, [config.genesisTransaction], 0, 0)
+                                '', 1465154705, [config.genesisTransaction], STARTING_DIFFICULTY, 0)
 
     config.blockchain = [config.genesisBlock]
 
