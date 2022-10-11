@@ -13,18 +13,18 @@ The blockchain will run within a [Docker container](https://thierrysans.me/CSCD2
 
 ###### React as frontend + Flask as backend, all serve through Flask
 
-your url+port is also repersenting the backend url+port since I chosed to compile the react frontend and serve it throught flask
+your url+port is also representing the backend url+port since I chose to compile the react frontend and serve it throught flask
 
-- everything will still in docker container (requirement)
-- each ip repersent one node
+- everything will still be in a docker container (requirement)
+- each ip represents one node
 
 ###### localhost:5000 frontend access localhost:5000 backend
 
-you can using the application like a local node app, the private key is always stored in backend, React frontend could control Flask backend to run operations that using private key by sending some requests.
+you can use the application like a local node app, the private key is always stored in the backend, React frontend could control Flask backend to run operations that use a private key by sending some requests.
 
 ###### localhost:5000 frontend access localhost:5001 backend
 
-by enter a new node address in React, we can accompulish using frontend with port 5000 send request to port 5001, and since they have different URL, some private requests like `post transaction` will blocked with less effort. the public requests like `get balance` will be approved, making user can use it as a wallet (query) application.
+by entering a new node address in React, we can use the frontend with port 5000 to send request to port 5001, and since they have different URLs, some private requests like `post transaction` will blocked with less effort. Public requests like `get balance` will be approved, so that users can use it as a wallet (query) application.
 
 
 
@@ -52,25 +52,31 @@ docker run --rm -p 5001:5001 -v $(pwd)/src:/shared dotcoin flask --app dotcoin.p
 
 > Type `ctrl-c` to stop the server. 
 
+###### Testing:
+
 ##### Test Flow 1
 
-- Access http://localhost:5000/ click `query peer`
-- Access http://localhost:5001/ click `query peer`
-- Enter `http://localhost:5000/` to Peer section and click `query peer` in both node to check they are linked.
+- Access http://localhost:5000/ click `peer->refresh button`
+
+- Access http://localhost:5001/ click `peer->refresh buttonr`
+
+  > run  `npm run build` under `/react-frontend` if page is not working (check Contribution section)
+
+- Enter `http://localhost:5000/` to Peer section and click `query peer` in both nodes to check they are linked.
 
 ##### Test Flow 2
 
 - Go back to http://localhost:5000/
 
-- Click `get keypair` button, this will returns prot's public and private key.
+- Click `keypair->refresh buttonr` button, this will returns port's public and private key.
 
-  > Note: this operation can only be done when the frontend&backend with the same port, ie. since they are considered as one node, the private key will returned for texting purpose. But there is no function is depends on private key in frontend.
+  > Note: this operation can only be done when the frontend & backend with the same port, ie. since they are considered as one node, the private key will returned for testing purposes. But there are no functions that depend on private key in frontend.
 
 - Click `refresh balance` button this will display your balance
 
-- Click `start mining` button twice, this will generate two blocks and `50*2` coins reward will send to public key you get above.
+- Click `start mining` button twice, this will generate two blocks and `50*2` coins as a reward will be sent to the public key you get above.
 
-  > The mining difficulties is functioning with BLOCK_GENERATION_INTERVAL = DIFFICULTY_ADJUSTMENT_INTERVAL = 10(seconds, blocks), difficulites is starts with 0, you may  need click button multiple times to see it's changes 
+  > The mining difficulty level is represented with BLOCK_GENERATION_INTERVAL = DIFFICULTY_ADJUSTMENT_INTERVAL = 10(seconds, blocks), difficulites starts with 0, you may need to click the button multiple times to see its changes 
 
 - Click `refresh blocks` button to check there are 3 blocks, the first block is the built in genesis block
 
@@ -126,9 +132,16 @@ http://localhost:5000/peer
 
 #### Contribution
 
-Since I choosed to compile the react frontend and serve it throught flask, there are a little bit effert required if you want to make change in frontend.
+Since I chose to compile the react frontend and serve it throught flask, there is a little bit of effort required if you want to make change in frontend.
 
-The source of frontend is located in `/react-frontend` once you finished change, run `npm run build` in the same directory, this will output two folders under flask's src folder: `/src/static` and `/src/templates`
+The source of the frontend is located in `/react-frontend` once you finished the change, run `npm run build` in the same directory, this will output two folders under flask's src folder: `/src/static` and `/src/templates`
+
+You might want to include the following commands inside Dockerfile
+
+```
+RUN npm install @mui/material @emotion/react @emotion/styled
+RUN npm install @mui/icons-material
+```
 
 
 
