@@ -1,28 +1,34 @@
 Dotcoin
 -----
 
-> In this assignment, you will build a small ledger-based blockchain similar to Bitcoin. The original Bitcoin [whitepaper](https://Bitcoin.org/Bitcoin.pdf) is an excellent resource however the tutorial [Naivecoin: a tutorial for building a cryptocurrency](https://lhartikk.github.io/) provides a simpler but yet comprehensive overview of the most important Bitcoin concepts.
->
-> You are tasked to implement a Python version of Naivecoin called *Dotcoin*. The goal is not solely to translate this code into python but rather understand in details the Bitcoin mechanics. You code must work but your grade will also depend on your understanding of the concepts. You will likely be asked to explain your code during during a live meeting with the instructor. 
+#### Introduction
 
-The blockchain will run within a [Docker container](https://thierrysans.me/CSCD27/doc/docker/) and use [Python Flask](https://palletsprojects.com/p/flask/) for the HTTP server (instead of Node Express in the tutorial) and the [Python Libsodium Library (PyNaCl)](https://pynacl.readthedocs.io/en/latest/) for the cryptography primitives.
+This project is a ledger-based blockchain for me to become familiar with the underlying logic of Bitcoin. 
+It covers the essential concepts, including proof of work, race conditions, validation, transactions (pool), and wallet.
+I also wrote a React frontend that allows you to access each node's state on localhost when you run multiple instances (=node) with Docker for debugging and testing purposes.
+
+> The original Bitcoin [whitepaper](https://Bitcoin.org/Bitcoin.pdf) is an excellent resource; however, the tutorial [Naivecoin: a tutorial for building a cryptocurrency](https://lhartikk.github.io/) (Typescript) provides a more straightforward yet comprehensive overview of the essential Bitcoin concepts.
 
 
 
 #### Project Setup/Background
 
-###### React as frontend + Flask as backend, all serve through Flask
+The blockchain node will run within a [Docker container](https://thierrysans.me/CSCD27/doc/docker/) and use [Python Flask](https://palletsprojects.com/p/flask/) for the HTTP server.
 
-your url+port is also representing the backend url+port since I chose to compile the react frontend and serve it throught flask
+![relation](/Users/sososong/Desktop/github_temp/sosocoin/media/relation.png)
 
-- everything will still be in a docker container (requirement)
-- each ip represents one node
+##### React as frontend + Flask as backend, all serve through Flask
 
-###### localhost:5000 frontend access localhost:5000 backend
+Serving React with a Flask backend means Flask will respond with a React webpage when the "/" page is requested.  A node running in a container consisted of a React frontend and a Flask backend; therefore, I let them have the same port number to make it easier to distinguish between them.
+
+- Everything will be inside the docker container, which has a stable setup.
+- Each port represents one node.
+
+##### localhost:5000 frontend access localhost:5000 backend
 
 you can use the application like a local node app, the private key is always stored in the backend, React frontend could control Flask backend to run operations that use a private key by sending some requests.
 
-###### localhost:5000 frontend access localhost:5001 backend
+##### localhost:5000 frontend access localhost:5001 backend
 
 by entering a new node address in React, we can use the frontend with port 5000 to send request to port 5001, and since they have different URLs, some private requests like `post transaction` will blocked with less effort. Public requests like `get balance` will be approved, so that users can use it as a wallet (query) application.
 
@@ -30,7 +36,7 @@ by entering a new node address in React, we can use the frontend with port 5000 
 
 #### Get Start
 
-###### Build the docker image (first time only)
+##### Build the docker image (first time only)
 
 ```
 docker build -t dotcoin .
@@ -38,13 +44,13 @@ docker build -t dotcoin .
 
 To run your code in debug mode (the server will automatically reload when the source files change)
 
-###### Add node 1:
+##### Add node 1:
 
 ```
 docker run --rm -p 5000:5000 -v $(pwd)/src:/shared dotcoin flask --app dotcoin.py --debug run --host=0.0.0.0 -p 5000
 ```
 
-###### Add node 2:
+##### Add node 2:
 
 ```
 docker run --rm -p 5001:5001 -v $(pwd)/src:/shared dotcoin flask --app dotcoin.py --debug run --host=0.0.0.0 -p 5001
@@ -52,9 +58,9 @@ docker run --rm -p 5001:5001 -v $(pwd)/src:/shared dotcoin flask --app dotcoin.p
 
 > Type `ctrl-c` to stop the server. 
 
-###### Testing:
+##### Testing:
 
-##### Test Flow 1
+###### Test Flow 1
 
 - Access http://localhost:5000/ click `peer->refresh button`
 
@@ -66,7 +72,7 @@ docker run --rm -p 5001:5001 -v $(pwd)/src:/shared dotcoin flask --app dotcoin.p
 
 - Click  `peer->refresh button` in both nodes to check they are linked.
 
-##### Test Flow 2
+###### Test Flow 2
 
 - Go back to http://localhost:5000/
 
@@ -84,7 +90,7 @@ docker run --rm -p 5001:5001 -v $(pwd)/src:/shared dotcoin flask --app dotcoin.p
 
 - Click `blocks->refresh button` button to check there are 3 blocks, the first block is the built in genesis block
 
-##### Test Flow 3
+###### Test Flow 3
 
 - Get http://localhost:5001/'s public key
 
@@ -99,7 +105,7 @@ docker run --rm -p 5001:5001 -v $(pwd)/src:/shared dotcoin flask --app dotcoin.p
 - Click `start mining` to add the transaction to the block
 - Click `blocks->refresh button` to see the transaction you make
 
-##### Test Flow 4
+###### Test Flow 4
 
 - Click `sync with peers` (one direction sync) to replace your chain 
 
@@ -114,7 +120,7 @@ docker run --rm -p 5001:5001 -v $(pwd)/src:/shared dotcoin flask --app dotcoin.p
 
 #### API Sandbox
 
-###### GET Requests
+##### GET Requests
 
 ```python
 http://localhost:5000/startMining
@@ -126,7 +132,7 @@ http://localhost:5000/peers
 http://localhost:5000/syncPeers
 ```
 
-###### POST Requests
+##### POST Requests
 
 ```python
 http://localhost:5000/transaction
