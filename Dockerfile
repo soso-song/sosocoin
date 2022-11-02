@@ -6,8 +6,8 @@ RUN apt-get update && apt-get upgrade -y && \
 RUN pip3 install flask pynacl
 RUN pip3 install ecdsa
 RUN pip install requests
-RUN npm install @mui/material @emotion/react @emotion/styled
-RUN npm install @mui/icons-material
+# RUN npm install @mui/material @emotion/react @emotion/styled
+# RUN npm install @mui/icons-material
 
 WORKDIR /shared
 

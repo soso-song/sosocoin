@@ -1,4 +1,4 @@
-Dotcoin
+Sosocoin
 -----
 
 #### Introduction
@@ -13,7 +13,31 @@ I also wrote a React frontend that allows you to access each node's state on loc
 
 #### Project Setup/Background
 
-The blockchain node will run within a [Docker container](https://thierrysans.me/CSCD27/doc/docker/) and use [Python Flask](https://palletsprojects.com/p/flask/) for the HTTP server.
+##### Build the docker image (first time only)
+
+```
+docker build -t dotcoin .
+```
+
+To run your code in debug mode (the server will automatically reload when the source files change)
+
+##### Add a node running on port 5000
+
+```
+docker run --rm -p 5000:5000 -v $(pwd)/src:/shared dotcoin flask --app dotcoin.py --debug run --host=0.0.0.0 -p 5000
+```
+
+##### Add a node running on port 5001
+
+```
+docker run --rm -p 5001:5001 -v $(pwd)/src:/shared dotcoin flask --app dotcoin.py --debug run --host=0.0.0.0 -p 5001
+```
+
+> Type `ctrl-c` to stop the server. 
+
+##### What is happening
+
+Each node instance runs in a [Docker container](https://thierrysans.me/CSCD27/doc/docker/) and uses a [Python Flask HTTP server](https://palletsprojects.com/p/flask/) for user interaction.
 
 ![relation](/Users/sososong/Desktop/github_temp/sosocoin/media/relation.png)
 
@@ -23,6 +47,8 @@ Serving React with a Flask backend means Flask will respond with a React webpage
 
 - Everything will be inside the docker container, which has a stable setup.
 - Each port represents one node.
+
+
 
 ##### localhost:5000 frontend access localhost:5000 backend
 
@@ -34,31 +60,7 @@ by entering a new node address in React, we can use the frontend with port 5000 
 
 
 
-#### Get Start
-
-##### Build the docker image (first time only)
-
-```
-docker build -t dotcoin .
-```
-
-To run your code in debug mode (the server will automatically reload when the source files change)
-
-##### Add node 1:
-
-```
-docker run --rm -p 5000:5000 -v $(pwd)/src:/shared dotcoin flask --app dotcoin.py --debug run --host=0.0.0.0 -p 5000
-```
-
-##### Add node 2:
-
-```
-docker run --rm -p 5001:5001 -v $(pwd)/src:/shared dotcoin flask --app dotcoin.py --debug run --host=0.0.0.0 -p 5001
-```
-
-> Type `ctrl-c` to stop the server. 
-
-##### Testing:
+#### Testing:
 
 ###### Test Flow 1
 
@@ -148,7 +150,7 @@ Since I chose to compile the react frontend and serve it throught flask, there i
 
 The source of the frontend is located in `/react-frontend` once you finished the change, run `npm run build` in the same directory, this will output two folders under flask's src folder: `/src/static` and `/src/templates`
 
-You might want to include the following commands inside Dockerfile
+You might want to uncomment the following lines inside Dockerfile
 
 ```
 RUN npm install @mui/material @emotion/react @emotion/styled
