@@ -3,8 +3,7 @@ Sosocoin
 
 #### Introduction
 
-This project is a ledger-based blockchain for me to become familiar with the underlying logic of Bitcoin. 
-It covers the essential concepts, including proof of work, race conditions, validation, transactions (pool), and wallet.
+This project is a ledger-based blockchain for me to become familiar with the underlying logic of Bitcoin.  It covers the essential concepts, including proof of work, race conditions, validation, transactions (pool), and non-deterministic wallet.
 I also wrote a React frontend that allows you to access each node's state on localhost when you run multiple instances (=node) with Docker for debugging and testing purposes.
 
 > The original Bitcoin [whitepaper](https://Bitcoin.org/Bitcoin.pdf) is an excellent resource; however, the tutorial [Naivecoin: a tutorial for building a cryptocurrency](https://lhartikk.github.io/) (Typescript) provides a more straightforward yet comprehensive overview of the essential Bitcoin concepts.
@@ -127,7 +126,9 @@ The requests like `/getBalance`, will be performed so that users can use it as a
 
 - Go to http://localhost:5000/ and send a transaction with the amount of `90` to that public key
 
-  > Note: this will require two txIn with the amount of 50 that mint/reward to you in Test Flow 2, then create two txOut. By testing this way, you can now make some HTTP requests to see the detailed information:
+  > Note: this will require two [Unspent TX Outputs](https://en.wikipedia.org/wiki/Unspent_transaction_output) with the amount of 50 that mint/reward to you in Test Flow 2, then create two txOut. 
+  >
+  > You can now make some HTTP requests to see the detailed information:
   >
   > `GET` `http://localhost:5000/unspentTxOuts  `
   >
