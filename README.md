@@ -42,7 +42,7 @@ docker run --rm -p 5001:5001 -v $(pwd)/src:/shared dotcoin flask --app dotcoin.p
 
 Each node instance runs in a [Docker container](https://thierrysans.me/CSCD27/doc/docker/) and uses a [Python Flask HTTP server](https://palletsprojects.com/p/flask/) for user interaction.
 
-![relation](/Users/sososong/Desktop/github_temp/sosocoin/media/relation.png)
+![relation](./media/relation.png)
 
 ##### React as frontend + Flask as backend, all serve through Flask
 
